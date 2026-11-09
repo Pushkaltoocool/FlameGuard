@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly Report Maker – Flame Guard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root { --blue: #345f91; --ink: #1d2330; --muted: #5d6675; --line: #d7dde6; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; background: #eef1f5; color: var(--ink); }
+
+/* ---------- app layout ---------- */
+.app { display: grid; grid-template-columns: minmax(340px, 460px) 1fr; min-height: 100vh; }
+.editor { background: #fff; border-right: 1px solid var(--line); padding: 20px 20px 40px; overflow: auto; }
+.editor h1 { font-size: 18px; margin: 0 0 2px; color: var(--blue); }
+.editor .sub { font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+.row { display: grid; grid-template-columns: 1.4fr .8fr 1fr; gap: 10px; margin-bottom: 14px; }
+label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+input, select, textarea { width: 100%; font: inherit; font-size: 14px; color: var(--ink); border: 1px solid #c3cbd7;
+  border-radius: 6px; padding: 7px 9px; background: #fff; }
+textarea { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; line-height: 1.45; min-height: 230px; resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid #8fb0d8; border-color: var(--blue); }
+.field { margin-bottom: 14px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+button { font: inherit; font-size: 14px; border-radius: 6px; padding: 8px 14px; cursor: pointer; border: 1px solid #c3cbd7; background: #f6f8fb; color: var(--ink); }
+button.primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+button:hover { filter: brightness(.96); }
+.help { font-size: 12.5px; color: var(--muted); background: #f6f8fb; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.help code { font-family: Consolas, monospace; color: var(--ink); background: #e9edf3; padding: 0 4px; border-radius: 3px; }
+.help table { border-collapse: collapse; width: 100%; }
+.help td { padding: 2px 4px; vertical-align: top; }
+.status { font-size: 12.5px; min-height: 18px; margin: -6px 0 12px; color: var(--muted); }
+.status.warn { color: #b3261e; font-weight: 600; }
+
+.preview { padding: 24px; overflow: auto; }
+.stage { width: 100%; max-width: 1100px; margin: 0 auto; position: relative; }
+.scaler { transform-origin: top left; width: 960px; height: 720px; box-shadow: 0 6px 24px rgba(20, 30, 50, .18); }
+
+/* ---------- the report page (10in x 7.5in = 960 x 720 css px) ---------- */
+.page { width: 960px; height: 720px; position: relative; overflow: hidden; background: #fff;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", Arial, sans-serif; color: #111;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; --fs: 11.5pt; }
+.p-band { position: absolute; left: 0; right: 0; top: 0; height: 40px; background: #c9d6e8; }
+.p-title { position: absolute; left: 19px; right: 19px; top: 19px; height: 75px; background: var(--blue);
+  border: 3px solid #fff; border-radius: 12px; box-shadow: 0 0 0 1px #9fb3cf; color: #fff;
+  font-size: 36px; padding: 0 24px; line-height: 69px; white-space: nowrap; }
+.p-team { position: absolute; left: 40px; top: 113px; font-size: 25px; white-space: nowrap; }
+.p-team .chk { color: #6b6b1f; margin-right: 12px; }
+.p-team u { font-style: italic; }
+.p-grid { position: absolute; left: 48px; top: 171px; width: 876px; height: 516px; display: grid;
+  grid-template-columns: 1fr 1fr; grid-template-rows: 42px 1fr; gap: 1px; background: #fff; }
+.p-th { background: #000; color: #fff; font-weight: 700; font-size: 22.5px; display: flex; align-items: center; justify-content: center; }
+.p-cell { background: #c8c8c8; padding: 10px 13px; overflow: hidden; font-size: var(--fs); line-height: 1.32; }
+.p-cell .h { font-weight: 700; font-size: 1.13em; margin-top: .55em; }
+.p-cell .h:first-child, .p-cell .gap + .h { margin-top: 0; }
+.p-cell .i { padding-left: 15px; }
+.p-cell .s { padding-left: 33px; }
+.p-cell .issue { color: #e00000; }
+.p-cell .gap { height: .55em; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .editor { border-right: 0; border-bottom: 1px solid var(--line); }
+  .preview { padding: 16px; }
+  .row { grid-template-columns: 1fr 1fr; }
+}
+
+@page { size: 10in 7.5in; margin: 0; }
+@media print {
+  html, body { width: 10in; height: 7.5in; overflow: hidden; background: #fff; }
+  .editor { display: none !important; }
+  .app { display: block; min-height: 0; }
+  .preview { padding: 0; overflow: visible; }
+  .stage { max-width: none; height: auto !important; }
+  .scaler { transform: none !important; box-shadow: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="editor">
+    <h1>Weekly Report Maker</h1>
+    <p class="sub">Type on the left, check the preview, then Download PDF.</p>
+
+    <div class="row">
+      <div><label for="team">Team name</label><input id="team"></div>
+      <div><label for="week">Course week</label><select id="week"></select></div>
+      <div><label for="date">Date</label><input id="date"></div>
+    </div>
+
+    <div class="field"><label for="left">Current Week Status</label><textarea id="left" spellcheck="true"></textarea></div>
+    <div class="field"><label for="right">Next Week Plan</label><textarea id="right" spellcheck="true"></textarea></div>
+
+    <div class="status" id="status"></div>
+    <div class="btns">
+      <button class="primary" id="pdf">Download PDF</button>
+      <button id="share">Copy share link</button>
+      <button id="clear">Clear this week</button>
+    </div>
+
+    <div class="help">
+      <table>
+        <tr><td><code>-Heading</code></td><td>bold section title</td></tr>
+        <tr><td><code>. item – 11/09 (Name)</code></td><td>normal line</td></tr>
+        <tr><td><code>-- detail</code></td><td>indented sub-line</td></tr>
+        <tr><td><code>! issue: …</code></td><td>red issue line</td></tr>
+        <tr><td><i>empty line</i></td><td>small gap</td></tr>
+      </table>
+      <p style="margin:8px 0 0">Your work is saved in this browser automatically, per week. To hand it to a teammate, use <b>Copy share link</b>. In the print window choose <b>Save as PDF</b>; the page size is already set.</p>
+    </div>
+  </section>
+
+  <section class="preview">
+    <div class="stage" id="stage">
+      <div class="scaler" id="scaler">
+        <div class="page" id="page">
+          <div class="p-band"></div>
+          <div class="p-title">Project Progress Weekly Report</div>
+          <div class="p-team"><span class="chk">&#10003;</span><u id="pTeam"></u> <span id="pWeek"></span></div>
+          <div class="p-grid">
+            <div class="p-th">Current Week Status</div>
+            <div class="p-th">Next Week Plan</div>
+            <div class="p-cell" id="pLeft"></div>
+            <div class="p-cell" id="pRight"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var WEEK_DATES = { 9: 'Oct. 28th', 10: 'Nov. 4th', 11: 'Nov. 11th', 12: 'Nov. 18th', 13: 'Nov. 25th', 14: 'Dec. 2nd', 15: 'Dec. 9th' };
+  var BASE_PT = 11.5, MIN_PT = 8;
+  var EXAMPLE = {
+    team: 'Team Flame Guard', week: '11', date: 'Nov. 11th',
+    left: [
+      '-Held two team meetings',
+      '. Sat: check-in, slides & speakers allocated – 11/07 (All)',
+      '. Sun: reviewed every slide, slides done – 11/08 (All)',
+      '',
+      '-Wrote the project proposal',
+      '. Proposal document – 11/06 (Pushkal)',
+      '. Proposal PDF uploaded to GitHub – 11/09 (Pushkal)',
+      '. Presentation slides submitted – 11/09 (Pushkal)',
+      '',
+      '-Built first W19 network in Packet Tracer',
+      '. Network + floor plans done – 11/09 (Pushkal)',
+      '-- Router → core switch → WLC + servers',
+      '-- 1F/2F switches, ceiling hubs, 10 APs, PCs',
+      '-- Smoke detector + siren in all 13 offices',
+      '-- Devices placed at surveyed positions',
+      '! issue: network closet not visited yet',
+      '',
+      '-Finished 3D model of W19',
+      '. 373 surveyed items placed – 11/05 (Pushkal)',
+      '. Offline walkthrough editor – 11/07 (Pushkal)'
+    ].join('\n'),
+    right: [
+      '- Present project proposal',
+      '. Proposal presentation – 11/11 (All)',
+      '. Get feedback from professor – 11/11 (All)',
+      '',
+      '- Finish W19 investigation',
+      '. Visit network closet with IT office – 11/18 (Sadat)',
+      '. Speed tests, busy vs. quiet times – 11/18 (Emon)',
+      '. Confirm 2F APs & locations – 11/18 (Islam, Emon)',
+      '',
+      '- Improve network design (Packet Tracer)',
+      '. Update .pkt to real as-is network – 11/18 (Pushkal)',
+      '. VLAN + IP addressing plan – 11/18 (Sadat)',
+      '-- 10 Staff · 20 Labs · 30 Wi-Fi · 40 Fire IoT',
+      '-- 50 Security · 99 Mgmt',
+      '. Wireless controller + Wi-Fi setup – 11/18 (Emon)',
+      '',
+      '- Test the fire alarm chain',
+      '. Detector → siren in 1 office – 11/18 (Islam, Hassan)'
+    ].join('\n')
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var team = $('team'), week = $('week'), date = $('date'), left = $('left'), right = $('right');
+
+  for (var w = 9; w <= 15; w++) {
+    var o = document.createElement('option'); o.value = String(w); o.textContent = 'Week ' + w; week.appendChild(o);
+  }
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function key(w) { return 'fg-weekly-report-' + w; }
+  function blank(w) { return { team: team.value || 'Team Flame Guard', week: String(w), date: WEEK_DATES[w] || '', left: '', right: '' }; }
+  function state() { return { team: team.value, week: week.value, date: date.value, left: left.value, right: right.value }; }
+  function apply(s) { team.value = s.team || 'Team Flame Guard'; week.value = s.week; date.value = s.date || WEEK_DATES[s.week] || ''; left.value = s.left || ''; right.value = s.right || ''; }
+  function load(w) {
+    var raw = store(key(w)), s = null;
+    if (raw) { try { s = JSON.parse(raw); } catch (e) { s = null; } }
+    if (!s) s = String(w) === '11' ? JSON.parse(JSON.stringify(EXAMPLE)) : blank(w);
+    s.week = String(w); apply(s);
+  }
+  function save() { store(key(week.value), JSON.stringify(state())); store('fg-weekly-report-last', week.value); }
+
+  function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function parse(text) {
+    return text.split('\n').map(function (line) {
+      var t = line.trim();
+      if (!t) return '<div class="gap"></div>';
+      if (t[0] === '!') return '<div class="s issue">- ' + esc(t.slice(1).trim()) + '</div>';
+      if (/^--/.test(t) || (/^\s+-/.test(line))) return '<div class="s">- ' + esc(t.replace(/^-+\s*/, '')) + '</div>';
+      if (t[0] === '-') return '<div class="h">' + esc(t) + '</div>';
+      if (t[0] === '.') return '<div class="i">' + esc(t) + '</div>';
+      return '<div class="i">' + esc(t) + '</div>';
+    }).join('');
+  }
+
+  var pL = $('pLeft'), pR = $('pRight'), page = $('page'), statusEl = $('status');
+  function overflow() { return pL.scrollHeight > pL.clientHeight + 1 || pR.scrollHeight > pR.clientHeight + 1; }
+  function render() {
+    $('pTeam').textContent = team.value;
+    $('pWeek').textContent = '(Week ' + week.value + (date.value ? ' – ' + date.value : '') + ')';
+    pL.innerHTML = parse(left.value); pR.innerHTML = parse(right.value);
+    var fs = BASE_PT; page.style.setProperty('--fs', fs + 'pt');
+    while (overflow() && fs > MIN_PT) { fs -= 0.25; page.style.setProperty('--fs', fs + 'pt'); }
+    if (overflow()) { statusEl.className = 'status warn'; statusEl.textContent = 'Too much text for one page – shorten some lines.'; }
+    else if (fs < BASE_PT) { statusEl.className = 'status'; statusEl.textContent = 'Text shrunk to ' + fs + 'pt so it fits on one page.'; }
+    else { statusEl.className = 'status'; statusEl.textContent = ''; }
+  }
+
+  var stage = $('stage'), scaler = $('scaler');
+  function fitPreview() {
+    var s = Math.min(1, stage.clientWidth / 960);
+    scaler.style.transform = 'scale(' + s + ')';
+    stage.style.height = (720 * s) + 'px';
+  }
+
+  var timer = null;
+  function changed() { render(); clearTimeout(timer); timer = setTimeout(save, 300); }
+  [team, date, left, right].forEach(function (el) { el.addEventListener('input', changed); });
+  week.addEventListener('change', function () { load(week.value); render(); save(); });
+
+  $('pdf').addEventListener('click', function () {
+    save();
+    var old = document.title;
+    document.title = 'Weekly_Report_' + (team.value || 'Team').replace(/^Team\s+/i, '').replace(/\s+/g, '_') + '_Week' + week.value;
+    window.print();
+    setTimeout(function () { document.title = old; }, 1000);
+  });
+
+  $('share').addEventListener('click', function () {
+    var url = location.href.split('#')[0] + '#r=' + encodeURIComponent(JSON.stringify(state()));
+    var done = function () { statusEl.className = 'status'; statusEl.textContent = 'Share link copied – anyone who opens it sees this report.'; };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, function () { prompt('Copy this link:', url); });
+    else prompt('Copy this link:', url);
+  });
+
+  $('clear').addEventListener('click', function () {
+    if (!confirm('Clear Week ' + week.value + '? This empties both columns.')) return;
+    left.value = ''; right.value = ''; changed();
+  });
+
+  // start: shared link > last week edited > week 11
+  var shared = null;
+  var m = location.hash.match(/^#r=(.+)$/);
+  if (m) { try { shared = JSON.parse(decodeURIComponent(m[1])); } catch (e) { shared = null; } }
+  if (shared && shared.week) { apply(shared); history.replaceState(null, '', location.pathname); save(); }
+  else load(store('fg-weekly-report-last') || '11');
+
+  window.addEventListener('resize', fitPreview);
+  fitPreview(); render();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>
