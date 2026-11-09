@@ -1,0 +1,3 @@
+# Firebase admin keys must never be committed or deployed
+*firebase-adminsdk*.json
+*service-account*.json
