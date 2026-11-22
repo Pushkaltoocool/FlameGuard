@@ -279,10 +279,21 @@ def main():
         'registered to FIRE-IOT-SRV 10.19.60.20 (user flameguard). ACL FIRE-IN/FIRE-OUT isolate VLAN 40.',
         'FIRE SIMULATION (S1): wait ~1 min after opening, then Physical, 2F, Alt+click "FIRE 221 (smoke source)".',
         'Smoke rises on 2F, each detector trips at 40 %, the server rule turns on that office\'s siren.',
-        'Grey = network closet, not surveyed yet (devices ASSUMED).'])}
+        'Grey = network closet: no access for students (confirmed), so its devices are ASSUMED from the Cisco design guide.'])}
+    closet = {'Still to verify on site:': '\n'.join([
+        'Still to verify on site:',
+        '- AP + hub model numbers, which hub feeds which AP',
+        '- wall ports per room, 3F layout',
+        "- existing fire devices in each professor's office",
+        'Network closet: NO ACCESS (confirmed) - router, core, WLC, servers',
+        'and closet switches stay assumed, sized from the Cisco design guide.']),
+        'Network closet / campus uplink': 'Network closet / campus uplink - NO ACCESS (assumed devices)'}
+    for v in ('draft', 'as-is'):
+        net['pt_notes'].setdefault(v, {}).update(closet)
     k = 'Team Flame Guard - W19 Endicott network'
-    net['pt_notes']['fire-demo'] = {k: net['pt_notes']['draft'][k].replace('upgrade draft v0.2', 'FIRE DEMO (cut-down copy of the upgrade draft v0.2:')
-                                    .replace('(22 Nov 2026)', 'core, alert server, all three 2F fire zones only)', 1)}
+    net['pt_notes']['fire-demo'] = dict(closet)
+    net['pt_notes']['fire-demo'][k] = ( net['pt_notes']['draft'][k].replace('upgrade draft v0.2', 'FIRE DEMO (cut-down copy of the upgrade draft v0.2:')
+                                    .replace('(22 Nov 2026)', 'core, alert server, all three 2F fire zones only)', 1))
     NET.write_text(json.dumps(net, indent=1, ensure_ascii=False) + '\n', encoding='utf8')
     write_doc(plan, vlans)
     print('IP plan: %d VLAN subnets, %d mgmt IPs, %d fire devices, %d DHCP pools, %d IoT rules'

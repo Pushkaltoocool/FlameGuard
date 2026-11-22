@@ -115,7 +115,7 @@ The signed sheet skips number 6, and rule 8 says Google Docs although the course
 
 ### Still missing / to verify
 
-- The network closet (core/distribution switches, router, patch panels, campus uplink) – the most important gap.
+- The network closet (core/distribution switches, router, patch panels, campus uplink): **cannot be surveyed – no access for students (confirmed 23 Nov 2026).** Closet devices stay assumed and are sized from the Cisco Campus LAN design guide.
 - AP and hub model numbers (photograph the back labels) and the cable category printed on the ceiling cables.
 - Speed tests (Wi-Fi and wired, busy vs quiet times) to back up the "network is slow" problem statement.
 - Inside every professor's office: which already have a detector, alarm or siren.
@@ -172,7 +172,7 @@ Plus furniture (85 chairs, 26 tables, 4 round tables, 1 whiteboard).
 ## 7. Suggested next steps
 
 1. Finish the Week 10 report and the Week 11 proposal deck (8 sections, max 15 slides), using the survey facts above.
-2. Visit the network closet with the IT office; record switch, router and patch-panel models and the uplink.
+2. ~~Visit the network closet~~ – not possible (no access, confirmed 23 Nov 2026); the closet is designed from the Cisco design guide instead.
 3. Run speed tests on 1F and 2F.
 4. Check each professor's office for existing fire devices; plan one detector, alarm and siren per office.
 5. Build the Packet Tracer topology (core/distribution/access, VLANs for staff, students, Wi-Fi and IoT fire system, wireless controller, IoT fire devices with a registration server).
@@ -206,4 +206,4 @@ Plus furniture (85 chairs, 26 tables, 4 round tables, 1 whiteboard).
 - **W19-fire-demo.pkt** = fast cut-down copy (core, FIRE-IOT-SRV, the three 2F fire zones) for the live demo; the full W19-network-layout.pkt becomes very slow with ~260 devices. Demo: open, wait ~1 min, Physical > WSU Campus > W19 Endicott > 2F, Alt+click the red car in 221 -> all 30 sirens on 2F sound (PT keeps one smoke value per floor). Verified 22 Nov: all 30 sirens on; ACL counters 2,025 / 1,815 matches.
 - **3D fire drill:** index.html has a "Fire drill" button: smoke spreads through the real floor plan (BFS around the courtyard), networked detectors trip at 40 %, HUD shows the alarm path with IPs/ports, sirens pulse, the professor in 221 evacuates, flashover at T+2:30. URL `index.html?fire=221&t=45` (`&cam=top`) jumps to a moment for screenshots. Key numbers: detected T+0:16, Siren 221 +46 ms, professor at the east stairs T+0:40 with 0 % corridor smoke. (Not yet copied into w19-walkthrough-editor.html / the Claude artifact.)
 - **Progress slides (Week 13, 25 Nov):** Notion page "Progress Slides Reference (Week 13)" under the main page: 15 slides with screenshots, speaker notes and owners (Hassan 1, 2, 10, 11; Sadat 4-6; Emon 7, 8, 14; Islam 3, 9, 15; Pushkal 12, 13). Images in docs/slides/.
-- **Open items:** 3F-ACC uplink and some AP links show down in the full file; WLC/SSID config; QoS on VLAN 40; closet survey; cost estimate.
+- **Open items:** 3F-ACC uplink and some AP links show down in the full file; WLC/SSID config; QoS on VLAN 40; cost estimate. The network closet cannot be surveyed (no access) – a fixed constraint, not an open task.
