@@ -96,6 +96,8 @@ The signed sheet skips number 6, and rule 8 says Google Docs although the course
 - **East stairwell:** from the east terrace a small door opens straight onto a wide stairwell going down to 1F (door width = stair width). 218 is on one side of it and the TA / International Administrative Center office on the other. The TA office has a door from the glass corridor and another door at its far end into the south corridor.
 - **South-east, after the TA office:** the Conference Room (one large room, door and frosted panel), then **220 – Dean of ECIS, John H. Yun**. There is **no 219 office**.
 - **Professors' offices (south side):** walking west from the east end, left/right pairs are 221/222, 223/224, 225/226, 227/228, 229/230, 231/232.
+- **Professors' offices (north and east sides):** the rooms opposite the south offices, 202–213 (two rows), plus 214–217 on the east side, matching the "Offices 202–217" sign. Confirmed on site (20 Nov 2026): 202 is first outside 201, 203 is directly opposite it, and the numbers continue in opposite pairs (204/205 … 212/213) along the corridor.
+- **Office count:** 30 rooms in all: 28 professors' offices (202–217 and 221–232), the Dean's office (220) and the Conference Room. Every one of them gets a detector, alarm and siren.
 - **201 – AI Research Institute (WAVE, AI & Bigdata Dept.):** frosted glass front with the door at the corner; workstation rows for five labs (1 AI security, 2 Intelligent MSiP, 3 Advanced AI, 4 AX, 5 AI for Industrial App.) and a meeting room with a long table. Next to 201 there is an opening down into the Start-up Hall with a mesh railing (no stairs in it).
 - **West side:** a corridor along the courtyard windows. The Start-up Hall below is open to 2F, with mesh railings along the edge. A stair runs up from the hall to 2F along the windows at the north end, with a single railing at its top.
 - **South-west stairs:** a stair from the hall up to 2F, with a second flight to 3F stacked directly above it (same width, same direction). The 3F flight starts from a small 2F landing at the far end.
@@ -113,7 +115,7 @@ The signed sheet skips number 6, and rule 8 says Google Docs although the course
 
 ### Still missing / to verify
 
-- The network closet (core/distribution switches, router, patch panels, campus uplink) – the most important gap.
+- The network closet (core/distribution switches, router, patch panels, campus uplink): **cannot be surveyed – no access for students (confirmed 23 Nov 2026).** Closet devices stay assumed and are sized from the Cisco Campus LAN design guide.
 - AP and hub model numbers (photograph the back labels) and the cable category printed on the ceiling cables.
 - Speed tests (Wi-Fi and wired, busy vs quiet times) to back up the "network is slow" problem statement.
 - Inside every professor's office: which already have a detector, alarm or siren.
@@ -170,8 +172,38 @@ Plus furniture (85 chairs, 26 tables, 4 round tables, 1 whiteboard).
 ## 7. Suggested next steps
 
 1. Finish the Week 10 report and the Week 11 proposal deck (8 sections, max 15 slides), using the survey facts above.
-2. Visit the network closet with the IT office; record switch, router and patch-panel models and the uplink.
+2. ~~Visit the network closet~~ – not possible (no access, confirmed 23 Nov 2026); the closet is designed from the Cisco design guide instead.
 3. Run speed tests on 1F and 2F.
 4. Check each professor's office for existing fire devices; plan one detector, alarm and siren per office.
 5. Build the Packet Tracer topology (core/distribution/access, VLANs for staff, students, Wi-Fi and IoT fire system, wireless controller, IoT fire devices with a registration server).
 6. Build the cost estimate from the device counts in w19-layout.json.
+
+---
+
+## 8. Keeping the 3D model and Packet Tracer in sync (added 17 Nov 2026)
+
+- **w19-network.json** is the single source of truth for the network: every device (name, Packet Tracer model, floor, x/z in metres, status, fire zone, VLAN), every link, and the VLAN plan.
+- **tools/w19_sync.py** (needs Python 3 + Pillow):
+  - `python tools/w19_sync.py check`: lists every difference between the JSON, the 3D model (index.html) and the .pkt.
+  - `python tools/w19_sync.py pull`: copies device positions moved in the 3D editor back into the JSON.
+  - `python tools/w19_sync.py build`: rewrites W19-network-layout.pkt (devices, links, floor-plan maps) and the 3D model from the JSON.
+- **tools/pkt_crypto.py** reads and writes the Packet Tracer file format directly, so the .pkt can be generated without clicking.
+- **Fire zones:** N = 202–213 (switch 2F-FIRE-N), E = 214–217, 220 Dean, Conference Room (2F-FIRE-E), S = 221–232 (2F-FIRE-S), R = all of 3F on switch 3F-FIRE: roof garden (artificial grass: 3 outdoor flame/heat detectors + 2 sirens; Packet Tracer's Smoke Detector stands in for the flame detector), Start-up Playground (3 smoke + 2 sirens), Sol Venture studio (smoke + siren), 3F lobby (smoke). 3F Wi-Fi (proposed): 3F-ACC with 3 APs in the Playground, 1 in the studio and 2 outdoor APs on the roof garden. As-is: no network devices on 3F. Each protected room has "Smoke <room>" and "Siren <room>" in both the 3D model and Packet Tracer.
+- **Two Packet Tracer files come from the same JSON** (`variants` in the JSON):
+  - **W19-as-is.pkt**: today's network. Only devices seen on site plus labelled assumptions (WSU-CAMPUS-GW, W19-CLOSET-SW, WSU-WLC), one flat VLAN 1, DHCP 172.19.0.0/22 from the assumed campus gateway, and the 64 existing smoke detectors (not networked).
+  - **W19-network-layout.pkt**: upgrade draft (core, WLC, servers, three fire zones). Configs still to be agreed; the final upgraded network will be its own new file.
+  - Build one file only: `python tools/w19_sync.py build as-is` (or `draft`).
+- **Close Packet Tracer before running build**, and don't save over a built file from an old Packet Tracer window.
+- **1F (updated 18 Nov 2026):** every 1F room (101–111, both 112 rooms, Storage, Start-up Hall) has 2 smoke detectors ("Smoke 1F <room> #1/#2"). As-is: stand-alone, no cable. Upgrade: the same detectors cabled to 1F-FIRE-N (101–107) and 1F-FIRE-S (108–112, Storage, Hall) on VLAN 40. PCs: 101 has 22, 112 Start-up center 12, one each in 102, 103, 110, 111, and lectern PCs in 104, 105, 108, 109.
+
+---
+
+## 9. IP plan, fire simulation and progress slides (added 22 Nov 2026)
+
+- **IP addressing plan:** `tools/w19_ipplan.py` writes every device's config into `w19-network.json` (`pt_config.draft`) and the full table into **docs/IP_PLAN.md**. Site block 10.19.0.0/16, third octet = VLAN, gateway .1 on W19-CORE SVIs: 10 Faculty, 20 Labs, 30 Staff Wi-Fi, 32/34/36/38 student Wi-Fi (/23), 40 Fire IoT, 50 Security, 60 Servers, 99 Mgmt, 999 native. R1-CORE 10.19.255.0/30. W19-SRV 10.19.60.10 (DHCP pools + DNS), FIRE-IOT-SRV 10.19.60.20. Fire devices static: Smoke 2xx = 10.19.40.1xx, Siren 2xx = 10.19.40.2xx (Conference .119/.219), 1F .11-.40, 3F .41-.53. ACLs FIRE-IN/FIRE-OUT on Vlan40: fire devices talk only to the alert server.
+- **Rebuild:** `python tools/w19_ipplan.py` then `python tools/w19_sync.py build draft` (and `build fire-demo`). Close Packet Tracer first.
+- **Packet Tracer fire simulation (scenario S1, office 221):** "FIRE 221 (smoke source)" = a Things > Old Car whose script adds 1.5 % smoke/s. Each detector trips at 40 % and reports to FIRE-IOT-SRV (user/password flameguard); rule "FIRE 2xx" turns on Siren 2xx. Detector scripts are patched to report on alarm change and to re-send the 0 -> 1 edge every 5 s (lost packets otherwise left some sirens silent). The build also fixes duplicate serial numbers (cloned devices shared serials, which broke IoT registration for 222-232).
+- **W19-fire-demo.pkt** = fast cut-down copy (core, FIRE-IOT-SRV, the three 2F fire zones) for the live demo; the full W19-network-layout.pkt becomes very slow with ~260 devices. Demo: open, wait ~1 min, Physical > WSU Campus > W19 Endicott > 2F, Alt+click the red car in 221 -> all 30 sirens on 2F sound (PT keeps one smoke value per floor). Verified 22 Nov: all 30 sirens on; ACL counters 2,025 / 1,815 matches.
+- **3D fire drill:** index.html has a "Fire drill" button: smoke spreads through the real floor plan (BFS around the courtyard), networked detectors trip at 40 %, HUD shows the alarm path with IPs/ports, sirens pulse, the professor in 221 evacuates, flashover at T+2:30. URL `index.html?fire=221&t=45` (`&cam=top`) jumps to a moment for screenshots. Key numbers: detected T+0:16, Siren 221 +46 ms, professor at the east stairs T+0:40 with 0 % corridor smoke. (Not yet copied into w19-walkthrough-editor.html / the Claude artifact.)
+- **Progress slides (Week 13, 25 Nov):** Notion page "Progress Slides Reference (Week 13)" under the main page: 15 slides with screenshots, speaker notes and owners (Hassan 1, 2, 10, 11; Sadat 4-6; Emon 7, 8, 14; Islam 3, 9, 15; Pushkal 12, 13). Images in docs/slides/.
+- **Open items:** 3F-ACC uplink and some AP links show down in the full file; WLC/SSID config; QoS on VLAN 40; cost estimate. The network closet cannot be surveyed (no access) – a fixed constraint, not an open task.
