@@ -219,6 +219,9 @@ body.dragging { cursor: col-resize; user-select: none; }
 .p-cell .s, .p-cell .x { padding-left: 44px; text-indent: -11px; }
 .p-cell .x { color: #e00000; }
 .p-cell .gap { height: .55em; }
+.p-links { position: absolute; left: 48px; right: 110px; bottom: 9px; font-size: 15px; font-style: italic; color: #0000e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-links a { color: inherit; text-decoration: none; }
+.p-links .sep { margin: 0 10px; color: #7a7aff; }
 .p-num { position: absolute; right: 22px; bottom: 9px; font-size: 13px; font-weight: 700; color: #a0522d; }
 .c-wrap { position: absolute; left: 48px; top: 171px; width: 876px; height: 516px; overflow: hidden; }
 .c-table { display: grid; grid-template-columns: 108px 230px 1fr; gap: 1px; background: #fff; font-size: var(--fs); line-height: 1.32; }
@@ -315,6 +318,8 @@ body.dragging { cursor: col-resize; user-select: none; }
             <div class="prop"><span class="pl"><svg class="ic" viewBox="0 0 16 16"><rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/></svg>Date</span><input id="date" placeholder="Empty"></div>
             <div class="prop"><span class="pl"><svg class="ic" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8l-1.6 2.8L11.5 8.5h-8"/></svg>Milestone</span><input id="milestone" placeholder="Empty"></div>
             <div class="prop"><span class="pl"><svg class="ic" viewBox="0 0 16 16"><circle cx="6" cy="5.5" r="2.3"/><path d="M1.8 13.5c.5-2.4 2.2-3.7 4.2-3.7s3.7 1.3 4.2 3.7M10.5 3.4a2.2 2.2 0 0 1 0 4.2M12 9.9c1.2.5 2 1.7 2.3 3.6"/></svg>Team</span><input id="team" placeholder="Empty"></div>
+            <div class="prop"><span class="pl"><svg class="ic" viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1"/></svg>GitHub</span><input id="github" type="url" placeholder="Paste GitHub link"></div>
+            <div class="prop"><span class="pl"><svg class="ic" viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1"/></svg>Notion</span><input id="notion" type="url" placeholder="Paste Notion link"></div>
             <div class="prop"><span class="pl"><svg class="ic" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.2l2 1.3"/></svg>Last edited</span><span class="meta" id="edited">–</span></div>
           </div>
           <div class="hr"></div>
@@ -454,7 +459,10 @@ function serialize(lines) {
 const filled = (s) => !!(s && ((s.left || '').trim() || (s.right || '').trim()));
 
 /* ================= state ================= */
-const teamIn = $('team'), dateIn = $('date'), msIn = $('milestone');
+const teamIn = $('team'), dateIn = $('date'), msIn = $('milestone'), ghIn = $('github'), nbIn = $('notion');
+/* links carry over: a week without its own link uses the latest link set on any week */
+function lastLink(k) { for (const w of WEEKS.slice().reverse()) { const v = cache[w] && cache[w][k]; if (v) return v; } return ''; }
+const linkOf = (s, k) => (s && typeof s[k] === 'string' && s[k]) ? s[k] : lastLink(k);
 const ed = { left: $('ed-left'), right: $('ed-right') };
 let doc_ = { left: [], right: [] };
 let week = 0, user = null, cache = {}, started = false, dirty = false, unsub = null, lastEdit = 0;
@@ -463,12 +471,12 @@ const SESSION = Math.random().toString(36).slice(2) + Date.now().toString(36);  
 function stateFor(w) {
   if (w === week) return current();
   const s = cache[w] || {};
-  return { week: String(w), team: s.team || 'Team Flame Guard', date: s.date || nice(wed(w)), milestone: s.milestone || '', left: s.left || '', right: s.right || '', updatedAt: s.updatedAt, updatedBy: s.updatedBy };
+  return { week: String(w), team: s.team || 'Team Flame Guard', date: s.date || nice(wed(w)), milestone: s.milestone || '', github: linkOf(s, 'github'), notion: linkOf(s, 'notion'), left: s.left || '', right: s.right || '', updatedAt: s.updatedAt, updatedBy: s.updatedBy };
 }
-function current() { return { week: String(week), team: teamIn.value, date: dateIn.value, milestone: msIn.value, left: serialize(doc_.left), right: serialize(doc_.right) }; }
+function current() { return { week: String(week), team: teamIn.value, date: dateIn.value, milestone: msIn.value, github: ghIn.value.trim(), notion: nbIn.value.trim(), left: serialize(doc_.left), right: serialize(doc_.right) }; }
 
 function loadIntoEditor(s) {
-  teamIn.value = s.team; dateIn.value = s.date; msIn.value = s.milestone;
+  teamIn.value = s.team; dateIn.value = s.date; msIn.value = s.milestone; ghIn.value = s.github || ''; nbIn.value = s.notion || '';
   doc_.left = parse(s.left); doc_.right = parse(s.right);
   drawEditor('left'); drawEditor('right');
   $('edited').textContent = s.updatedAt ? ago(s.updatedAt) + (s.updatedBy && s.updatedBy !== 'setup' ? '' : '') : '–';
@@ -496,7 +504,7 @@ function flush() {
   dirty = false;
   cache[w] = Object.assign({}, cache[w], data);
   drawSide(); setSaved('Saving…');
-  setDoc(doc(db, 'reports', 'week-' + w), { team: data.team, date: data.date, milestone: data.milestone, left: data.left, right: data.right, week: w, updatedAt: serverTimestamp(), updatedBy: user ? user.email : '', session: SESSION }, { merge: true })
+  setDoc(doc(db, 'reports', 'week-' + w), { team: data.team, date: data.date, milestone: data.milestone, github: data.github, notion: data.notion, left: data.left, right: data.right, week: w, updatedAt: serverTimestamp(), updatedBy: user ? user.email : '', session: SESSION }, { merge: true })
     .then(() => { if (!dirty && week === w) setSaved('Saved'); })
     .catch((e) => { dirty = true; setSaved('Not saved – ' + (e.code || 'error'), true); });
 }
@@ -803,11 +811,19 @@ function cellHTML(lines) {
 }
 const header = (team, sub) => '<div class="p-band"></div><div class="p-title">Project Progress Weekly Report</div>' +
   '<div class="p-team"><span class="chk">&#10003;</span><u>' + esc(team) + '</u> ' + esc(sub) + '</div>';
+function linkHref(u) { u = String(u || '').trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return /^https?:\/\/[^\s"<>]+$/i.test(u) ? u : ''; }
+function linksHTML(s) {
+  const parts = [['GitHub', s.github], ['Notion', s.notion]].filter((p) => (p[1] || '').trim()).map((p) => {
+    const href = linkHref(p[1]), label = p[0] + ': ' + p[1].trim().replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+    return href ? '<a href="' + esc(href).replace(/"/g, '&quot;') + '" target="_blank" rel="noopener">' + esc(label) + '</a>' : esc(label);
+  });
+  return parts.length ? '<div class="p-links">&#8251; ' + parts.join('<span class="sep">|</span>') + '</div>' : '';
+}
 function buildPage(s, num, total) {
   const el = document.createElement('div'); el.className = 'page';
   el.innerHTML = header(s.team, '(Week ' + s.week + (s.date ? ' – ' + s.date : '') + ')') +
     '<div class="p-grid"><div class="p-th">Current Week Status</div><div class="p-th">Next Week Plan</div>' +
-    '<div class="p-cell">' + cellHTML(parse(s.left)) + '</div><div class="p-cell">' + cellHTML(parse(s.right)) + '</div></div>' +
+    '<div class="p-cell">' + cellHTML(parse(s.left)) + '</div><div class="p-cell">' + cellHTML(parse(s.right)) + '</div></div>' + linksHTML(s) +
     (total > 1 ? '<div class="p-num">' + num + '/' + total + '</div>' : '');
   return el;
 }
@@ -821,7 +837,7 @@ function buildCover(states, total) {
   const ws = states.map((s) => +s.week), first = Math.min(...ws), last = Math.max(...ws);
   el.innerHTML = header(states[0].team, '(Week ' + first + ' – Week ' + last + ' · Progress overview)') +
     '<div class="c-wrap"><div class="c-table"><div class="th">Week</div><div class="th">Milestone</div><div class="th">What we did</div>' + rows + '</div></div>' +
-    '<div class="p-num">1/' + total + '</div>';
+    linksHTML(states.reduce((a, b) => (+b.week > +a.week ? b : a))) + '<div class="p-num">1/' + total + '</div>';
   return el;
 }
 const BASE_PT = 11.5, MIN_PT = 7.5;
@@ -983,7 +999,7 @@ $('share').addEventListener('click', () => {
   if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(done, () => prompt('Copy this link:', url));
   else prompt('Copy this link:', url);
 });
-[teamIn, dateIn, msIn].forEach((el) => el.addEventListener('input', changed));
+[teamIn, dateIn, msIn, ghIn, nbIn].forEach((el) => el.addEventListener('input', changed));
 
 /* ================= global keys ================= */
 document.addEventListener('keydown', (e) => {
@@ -1076,9 +1092,9 @@ onAuthStateChanged(auth, (u) => {
     if (remoteChangedCurrent && !dirty && Date.now() - lastEdit > 5000) {
       const a = document.activeElement, editing = a && a.closest && a.closest('.doc') && (a.classList.contains('ln') || a.tagName === 'INPUT');
       const r = cache[week] || {};
-      const remote = { team: r.team || 'Team Flame Guard', date: r.date || nice(wed(week)), milestone: r.milestone || '', left: r.left || '', right: r.right || '', updatedAt: r.updatedAt, updatedBy: r.updatedBy };
+      const remote = { team: r.team || 'Team Flame Guard', date: r.date || nice(wed(week)), milestone: r.milestone || '', github: linkOf(r, 'github'), notion: linkOf(r, 'notion'), left: r.left || '', right: r.right || '', updatedAt: r.updatedAt, updatedBy: r.updatedBy };
       const mine = current();
-      if (remote.left !== mine.left || remote.right !== mine.right || remote.team !== mine.team || remote.date !== mine.date || remote.milestone !== mine.milestone) {
+      if (remote.left !== mine.left || remote.right !== mine.right || remote.team !== mine.team || remote.date !== mine.date || remote.milestone !== mine.milestone || remote.github !== mine.github || remote.notion !== mine.notion) {
         if (!editing) { loadIntoEditor(remote); render(); toast('Updated from another device'); }
       } else $('edited').textContent = ago(remote.updatedAt);
     }
